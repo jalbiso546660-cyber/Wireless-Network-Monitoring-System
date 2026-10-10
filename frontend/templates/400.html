@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}400 Bad Request{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <div class="display-1">400</div>
+  <h1 class="h4">Bad request</h1>
+  <p class="text-body-secondary">{{ reason or "The request could not be processed." }}</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to dashboard</a>
+</div>
+{% endblock %}

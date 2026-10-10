@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}500 Server Error{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <div class="display-1">500</div>
+  <h1 class="h4">Something went wrong</h1>
+  <p class="text-body-secondary">The error has been logged. Please try again.</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to dashboard</a>
+</div>
+{% endblock %}

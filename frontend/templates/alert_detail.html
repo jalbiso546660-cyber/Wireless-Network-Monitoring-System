@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Alert #{{ alert.id }}{% endblock %}
+{% set sev_cls = {'low':'secondary','medium':'info','high':'warning','critical':'danger'} %}
+{% set st_cls = {'new':'danger','acknowledged':'warning','resolved':'success'} %}
+{% set can_act = current_user.role in ['monitor', 'admin'] %}
+{% block content %}
+
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{{ url_for('alerts.index') }}">Alerts</a></li>
+  <li class="breadcrumb-item active">Alert #{{ alert.id }}</li>
+</ol></nav>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card"><div class="card-body">
+      <h1 class="h5">
+        <span class="badge text-bg-{{ sev_cls.get(alert.severity, 'secondary') }}">{{ alert.severity }}</span>
+        {{ alert.title }}
+        <span class="badge text-bg-{{ st_cls.get(alert.status, 'secondary') }}">{{ alert.status }}</span>
+      </h1>
+      <div class="table-responsive">
+      <table class="table table-sm mt-2 mb-0">
+        <tr><th class="w-25">Rule</th>
+            <td>{{ alert.rule_code | rule_label }}
+              <span class="small text-body-secondary font-monospace ms-1">({{ alert.rule_code }})</span>
+            </td></tr>
+        {% if alert.rule_code | rule_explain %}
+        <tr><th>What this means</th><td>{{ alert.rule_code | rule_explain }}</td></tr>
+        {% endif %}
+        <tr><th>Detail</th><td>{{ alert.detail or '—' }}</td></tr>
+        <tr><th>Raised</th><td>{{ alert.created_at }}</td></tr>
+        {% if alert.ack_at %}<tr><th>Acted at</th><td>{{ alert.ack_at }}</td></tr>{% endif %}
+        {% if alert.resolution_note %}<tr><th>Resolution note</th><td>{{ alert.resolution_note }}</td></tr>{% endif %}
+      </table>
+      </div>
+
+      {% if can_act and alert.status != 'resolved' %}
+      <div class="d-flex flex-wrap gap-2 mt-3">
+        {% if alert.status == 'new' %}
+        <form method="post" action="{{ url_for('alerts.acknowledge', alert_id=alert.id) }}">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button class="btn btn-outline-warning btn-sm">Acknowledge</button>
+        </form>{% endif %}
+        <form method="post" action="{{ url_for('alerts.resolve', alert_id=alert.id) }}" class="d-flex gap-1">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <input name="note" class="form-control form-control-sm" style="width:14rem" placeholder="resolution note (optional)">
+          <button class="btn btn-outline-success btn-sm">Resolve</button>
+        </form>
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card"><div class="card-body">
+      <h2 class="h6">Device</h2>
+      {% if device %}
+      <div class="table-responsive">
+      <table class="table table-sm mb-3">
+        <tr><th class="w-25">MAC</th><td class="font-monospace">
+          <a href="{{ url_for('devices.detail', device_id=device.id) }}">{{ device.device_label or device.mac_address }}</a>
+        </td></tr>
+        <tr><th>Last IP</th><td class="font-monospace">{{ device.last_ip or '—' }}</td></tr>
+        <tr><th>Vendor</th><td>{{ device.vendor or '—' }}</td></tr>
+        <tr><th>Status</th><td>{{ status_badge(device.status) }}</td></tr>
+        <tr><th>Open ports</th><td class="font-monospace">{{ device.open_ports or '—' }}</td></tr>
+      </table>
+      </div>
+      {% else %}
+      <p class="text-body-secondary small">This alert is not tied to a specific device.</p>
+      {% endif %}
+
+      <h2 class="h6">Triggering evidence — recent activity</h2>
+      <ul class="list-group list-group-flush small">
+        {% for h in history %}
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <span><span class="badge text-bg-light text-dark">{{ h.event }}</span>
+            <span class="font-monospace ms-2">{{ h.ip_address or '' }}</span></span>
+          <span class="text-body-secondary">{{ h.seen_at }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 text-body-secondary">No recent activity recorded.</li>
+        {% endfor %}
+      </ul>
+
+      {% if ip_history %}
+      <h2 class="h6 mt-3">IP history</h2>
+      <div class="small font-monospace">
+        {% for r in ip_history %}{{ r.ip }} ({{ r.hits }}){% if not loop.last %}, {% endif %}{% endfor %}
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

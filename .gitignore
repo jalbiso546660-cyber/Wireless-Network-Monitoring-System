@@ -1,0 +1,19 @@
+# Project root — see backend/.gitignore for backend-specific ignores (.env, reports/out)
+
+# Python virtualenv (shared by the backend)
+.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Logs / runtime (including rotated files: pwnm.log.1, pwnm.log.2, ...)
+*.log
+*.log.*
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/

@@ -1,0 +1,39 @@
+{# Reusable UI macros. Import with:  {% from "_macros.html" import status_badge %} #}
+
+{% macro status_badge(status) -%}
+  {%- set cls = {'authorized':'success','unauthorized':'warning','blocked':'danger'}.get(status, 'secondary') -%}
+  <span class="badge text-bg-{{ cls }}">{{ status | status_label }}</span>
+{%- endmacro %}
+
+{% macro online_badge(is_online) -%}
+  {%- if is_online -%}
+    <span class="badge text-bg-success">online</span>
+  {%- else -%}
+    <span class="badge text-bg-secondary">offline</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{# Pagination control. `args` carries the current filters so links keep them. #}
+{% macro pagination(page, total_pages, endpoint, args={}, page_arg='page') -%}
+{%- if total_pages > 1 -%}
+<nav aria-label="Pagination" data-keep-scroll>
+  <ul class="pagination pagination-sm justify-content-center mb-0">
+    <li class="page-item {{ 'disabled' if page <= 1 }}">
+      <a class="page-link" href="{{ url_for(endpoint, **dict(args, **{page_arg: page - 1})) }}" aria-label="Previous">&laquo;</a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+      {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+        <li class="page-item {{ 'active' if p == page }}">
+          <a class="page-link" href="{{ url_for(endpoint, **dict(args, **{page_arg: p})) }}">{{ p }}</a>
+        </li>
+      {% elif p == page - 3 or p == page + 3 %}
+        <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+      {% endif %}
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page >= total_pages }}">
+      <a class="page-link" href="{{ url_for(endpoint, **dict(args, **{page_arg: page + 1})) }}" aria-label="Next">&raquo;</a>
+    </li>
+  </ul>
+</nav>
+{%- endif -%}
+{%- endmacro %}

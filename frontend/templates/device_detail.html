@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, online_badge, pagination %}
+{% block title %}Device {{ device.device_label or device.mac_address }}{% endblock %}
+{% block content %}
+
+<nav aria-label="breadcrumb"><ol class="breadcrumb">
+  <li class="breadcrumb-item"><a href="{{ url_for('devices.index') }}">Devices</a></li>
+  <li class="breadcrumb-item active">{{ device.device_label or device.mac_address }}</li>
+</ol></nav>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card"><div class="card-body">
+      <h1 class="h4">{{ device.device_label or device.mac_address }}
+        {{ status_badge(device.status) }} {{ online_badge(device.is_online) }}</h1>
+      <div class="table-responsive">
+      <table class="table table-sm mt-2 mb-0">
+        <tr><th class="w-25">MAC</th><td class="font-monospace">{{ device.mac_address }}</td></tr>
+        <tr><th>Last IP</th><td class="font-monospace">{{ device.last_ip or '—' }}</td></tr>
+        <tr><th>Hostname</th><td>{{ device.hostname or '—' }}</td></tr>
+        <tr><th>Vendor</th><td>{{ device.vendor or '—' }}</td></tr>
+        <tr><th>OS guess</th><td>{{ device.os_guess or '—' }}</td></tr>
+        <tr><th>Open ports</th><td class="font-monospace">{{ device.open_ports or '—' }}</td></tr>
+        <tr><th>First seen</th><td>{{ device.first_seen }}</td></tr>
+        <tr><th>Last seen</th><td>{{ device.last_seen }}</td></tr>
+        {% if device.block_reason %}<tr><th>Flag reason</th><td>{{ device.block_reason }}</td></tr>{% endif %}
+        {% if ip_history and ip_history|length > 1 %}
+        <tr><th>IP history</th><td class="font-monospace small">
+          {% for r in ip_history %}{{ r.ip }}{% if not loop.last %}, {% endif %}{% endfor %}
+        </td></tr>{% endif %}
+      </table>
+      </div>
+    </div></div>
+
+    {% if mac_filter %}
+    <div class="alert alert-danger mt-3">
+      <strong>Flagged device — administrator action required.</strong><br>
+      {{ mac_filter }}
+      <div class="small mt-1 text-body-secondary">
+        PWNM does not cut traffic itself; it flags the device and raises a
+        critical alert on every reappearance.
+      </div>
+    </div>
+    {% endif %}
+
+    {% if current_user.role == 'admin' %}
+    <div class="card mt-3"><div class="card-body">
+      <h2 class="h6">Admin actions</h2>
+      <div class="d-flex flex-wrap gap-2 align-items-start">
+        {% if device.status != 'authorized' %}
+        <form method="post" action="{{ url_for('devices.authorize', device_id=device.id) }}"
+              data-confirm="Authorize this device as trusted?">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-success btn-sm">Authorize</button>
+        </form>{% endif %}
+        {% if device.status != 'blocked' %}
+        <form method="post" action="{{ url_for('devices.block', device_id=device.id) }}" class="d-flex gap-1"
+              data-confirm="Flag this device? Every reappearance will raise a critical alert.">
+          <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+          <input name="reason" class="form-control form-control-sm" style="width:12rem"
+                 placeholder="flag reason (optional)">
+          <button class="btn btn-danger btn-sm">Flag</button>
+        </form>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('devices.label', device_id=device.id) }}" class="mt-3">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label class="form-label small mb-1">Friendly label</label>
+        <div class="input-group input-group-sm" style="max-width:22rem">
+          <input name="label" class="form-control" value="{{ device.device_label or '' }}"
+                 placeholder="e.g. Patrick's phone">
+          <button class="btn btn-outline-primary">Save</button>
+        </div>
+      </form>
+      <form method="post" action="{{ url_for('devices.merge', device_id=device.id) }}" class="mt-3">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        <label class="form-label small mb-1">Merge a duplicate into this device (MAC randomization)</label>
+        <div class="input-group input-group-sm" style="max-width:22rem">
+          <input name="duplicate_mac" class="form-control font-monospace"
+                 placeholder="duplicate MAC e.g. aa:bb:cc:dd:ee:ff">
+          <button class="btn btn-outline-warning">Merge</button>
+        </div>
+      </form>
+    </div></div>
+    {% endif %}
+
+    {% if alerts %}
+    <div class="card mt-3"><div class="card-body">
+      <h2 class="h6">Related alerts</h2>
+      {% set sev_cls = {'low':'secondary','medium':'info','high':'warning','critical':'danger'} %}
+      <ul class="list-group list-group-flush small">
+        {% for a in alerts %}
+        <li class="list-group-item px-0 d-flex justify-content-between">
+          <span>
+            <span class="badge text-bg-{{ sev_cls.get(a.severity, 'secondary') }}">{{ a.severity }}</span>
+            <a href="{{ url_for('alerts.detail', alert_id=a.id) }}" class="ms-1">{{ a.title }}</a>
+          </span>
+          <span class="text-body-secondary">{{ a.created_at }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% if alerts_total %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+        <span class="small text-body-secondary">
+          Showing {{ (apage - 1) * alerts_per_page + 1 }}–{{ [apage * alerts_per_page, alerts_total] | min }}
+          of {{ alerts_total }}
+        </span>
+        {{ pagination(apage, alerts_pages, 'devices.detail',
+                      {'device_id': device.id, 'page': page}, page_arg='apage') }}
+      </div>
+      {% endif %}
+    </div></div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card h-100"><div class="card-body d-flex flex-column">
+      <h2 class="h6">Access history</h2>
+      <ul class="list-group list-group-flush flex-grow-1">
+        {% for h in history %}
+        <li class="list-group-item d-flex justify-content-between px-0">
+          <span>
+            {% if h.event == 'joined' %}<span class="badge text-bg-success">joined</span>
+            {% elif h.event == 'left' %}<span class="badge text-bg-secondary">left</span>
+            {% else %}<span class="badge text-bg-light text-dark">present</span>{% endif %}
+            <span class="font-monospace ms-2">{{ h.ip_address or '' }}</span>
+          </span>
+          <span class="text-body-secondary small">{{ h.seen_at }}</span>
+        </li>
+        {% else %}
+        <li class="list-group-item px-0 text-body-secondary">No history yet.</li>
+        {% endfor %}
+      </ul>
+      {% if total %}
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-auto pt-3">
+        <span class="small text-body-secondary">
+          Showing {{ (page - 1) * per_page + 1 }}–{{ [page * per_page, total] | min }} of {{ total }}
+        </span>
+        {{ pagination(page, total_pages, 'devices.detail',
+                       {'device_id': device.id, 'apage': apage}) }}
+      </div>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

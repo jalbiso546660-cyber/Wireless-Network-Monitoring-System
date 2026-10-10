@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="auth-brand">
+  <div class="brand-name">🛡️ PWNM</div>
+  <div class="brand-sub">Wireless Network Monitor</div>
+</div>
+<div class="card shadow-sm">
+  <div class="card-body p-4">
+    <h1 class="h5 mb-3 text-center">Sign in</h1>
+    <form method="post" action="{{ url_for('auth.login') }}">
+      {# CSRF token — validated on every POST by web/security.py #}
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label" for="username">Username</label>
+        <input class="form-control" id="username" name="username"
+               autocomplete="username" required autofocus>
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="password">Password</label>
+        <input class="form-control" id="password" name="password"
+               type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Sign in</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

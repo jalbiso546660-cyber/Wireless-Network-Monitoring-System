@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Welcome, {{ current_user.username }} <span style="font-weight:400">👋</span></h1>
+  </div>
+  <div class="head-meta">
+    Monitoring: <strong>{{ counts.total }}</strong> device(s)
+    <span class="ms-2">Last scan
+      <strong id="hdr-lastscan">{% if last_scan.seconds_ago is not none %}{{ last_scan.seconds_ago }}s{% else %}—{% endif %}</strong>
+      {% if last_scan.seconds_ago is not none %}ago{% endif %}
+      <span class="spinner-grow spinner-grow-sm text-success ms-1" id="live-dot" style="width:.5rem;height:.5rem"></span>
+    </span>
+  </div>
+</div>
+
+<!-- Stat tiles — four live numbers. -->
+<div class="row g-3">
+  <div class="col-6 col-xl-3">
+    <div class="stat-card accent-teal">
+      <div class="stat-label">Devices online</div>
+      <div class="stat-value" id="tile-online">{{ counts.online }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card accent-amber">
+      <div class="stat-label">Unauthorized</div>
+      <div class="stat-value" id="tile-unauth">{{ counts.unauthorized }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card accent-rose">
+      <div class="stat-label">Open alerts</div>
+      <div class="stat-value" id="tile-alerts">{{ open_alerts }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-xl-3">
+    <div class="stat-card accent-violet">
+      <div class="stat-label">Total devices</div>
+      <div class="stat-value" id="tile-total">{{ counts.total }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Live network throughput + gateway latency (from core.netstats). -->
+<div class="row g-3 mt-1">
+  <div class="col-sm-4">
+    <div class="stat-card accent-teal">
+      <div class="stat-label"><i class="bi bi-download" aria-hidden="true"></i> Download</div>
+      <div class="stat-value net-metric" id="net-download">—</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card accent-violet">
+      <div class="stat-label"><i class="bi bi-upload" aria-hidden="true"></i> Upload</div>
+      <div class="stat-value net-metric" id="net-upload">—</div>
+    </div>
+  </div>
+  <div class="col-sm-4">
+    <div class="stat-card accent-amber">
+      <div class="stat-label"><i class="bi bi-reception-4" aria-hidden="true"></i> Ping
+        <span id="net-gw" class="text-body-secondary fw-normal"></span></div>
+      <div class="stat-value net-metric" id="net-ping">—</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-title">Performance Metrics</div>
+
+<!-- Exactly two charts on the dashboard (7.1, 7.2) — no more. -->
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Devices online</h2>
+        <div class="panel-legend"><span class="lg"><span class="sw" style="background:var(--violet)"></span> online</span></div>
+      </div>
+      <div class="chart-box compact"><canvas id="chart-occupancy"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Open alerts by severity</h2></div>
+      <div class="chart-box compact"><canvas id="chart-open-severity"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Live device table + recent activity -->
+<div class="row g-3 mt-1">
+  <div class="col-xl-8">
+    <div class="panel">
+      <div class="panel-head">
+        <h2 class="panel-title">Live devices</h2>
+        <div class="d-flex gap-2">
+          <input id="filter-search" class="form-control form-control-sm" style="width:11rem"
+                 placeholder="filter MAC / IP / vendor…" autocomplete="off">
+          <select id="filter-status" class="form-select form-select-sm" style="width:9rem">
+            <option value="">all statuses</option>
+            <option value="authorized">authorized</option>
+            <option value="unauthorized">unauthorized</option>
+            <option value="blocked">flagged</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead>
+            <tr><th>Status</th><th>MAC</th><th>IP</th><th>Vendor</th><th>Hostname</th>
+                <th class="text-end">Last seen</th></tr>
+          </thead>
+          <tbody id="device-tbody">
+            {% for d in devices %}
+            <tr data-device-id="{{ d.id }}"
+                data-mac="{{ d.mac }}" data-ip="{{ d.ip or '' }}"
+                data-vendor="{{ d.vendor or '' }}" data-status="{{ d.status }}">
+              <td data-field="status">{{ status_badge(d.status) }}</td>
+              <td data-field="mac" class="font-monospace">
+                <a href="{{ url_for('devices.detail', device_id=d.id) }}">{{ d.label or d.mac }}</a>
+              </td>
+              <td data-field="ip" class="font-monospace">{{ d.ip or '' }}</td>
+              <td data-field="vendor">{{ d.vendor or '' }}</td>
+              <td data-field="hostname">{{ d.hostname or '' }}</td>
+              <td data-field="last_seen" class="text-end text-body-secondary"
+                  data-ago="{{ d.last_seen_ago if d.last_seen_ago is not none else '' }}">
+                {% if d.last_seen_ago is not none %}{{ d.last_seen_ago }}s ago{% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div id="empty-note" class="text-body-secondary small mt-2 {% if devices %}d-none{% endif %}">
+        No online devices right now.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel">
+      <div class="panel-head"><h2 class="panel-title">Recent activity</h2></div>
+      <ul class="feed" id="activity-feed">
+        {% for a in activity %}
+        <li>
+          <span>
+            {% if a.event == 'joined' %}<span class="badge text-bg-success">joined</span>
+            {% elif a.event == 'left' %}<span class="badge text-bg-secondary">left</span>
+            {% else %}<span class="badge text-bg-light">present</span>{% endif %}
+            <span class="ms-2 font-monospace">{{ a.device_label or a.mac_address }}</span>
+          </span>
+          <span class="text-body-secondary">{{ a.seen_at }}</span>
+        </li>
+        {% else %}
+        <li class="text-body-secondary">No activity yet.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/live.js') }}"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

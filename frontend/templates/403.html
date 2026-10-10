@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}403 Forbidden{% endblock %}
+{% block content %}
+<div class="text-center py-5">
+  <div class="display-1">403</div>
+  <h1 class="h4">Forbidden</h1>
+  <p class="text-body-secondary">
+    Your role ({{ current_user.role if current_user.is_authenticated else 'guest' }})
+    is not permitted to access this page.
+  </p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Back to dashboard</a>
+</div>
+{% endblock %}

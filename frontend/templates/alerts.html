@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, pagination %}
+{% block title %}Alerts{% endblock %}
+{% set sev_cls = {'low':'secondary','medium':'info','high':'warning','critical':'danger'} %}
+{% set can_act = current_user.role in ['monitor', 'admin'] %}
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Alerts</h1>
+  <div>
+    {% for sev, cls in sev_cls.items() %}
+      {% if by_severity.get(sev) %}
+        <span class="badge text-bg-{{ cls }} me-1">{{ sev }}: {{ by_severity[sev] }}</span>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Charts 6.1, 6.2, 6.3 -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h2 class="h6 text-body-secondary">By severity</h2>
+    <div class="chart-box"><canvas id="chart-alerts-severity"></canvas></div>
+  </div></div></div>
+  <div class="col-lg-8"><div class="card h-100"><div class="card-body">
+    <h2 class="h6 text-body-secondary">Over time</h2>
+    <div class="chart-box"><canvas id="chart-alerts-over-time"></canvas></div>
+  </div></div></div>
+  <div class="col-12"><div class="card"><div class="card-body">
+    <h2 class="h6 text-body-secondary">By rule</h2>
+    <div class="chart-box"><canvas id="chart-alerts-by-rule"></canvas></div>
+  </div></div></div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+  <div class="btn-group btn-group-sm" role="group">
+    <a class="btn btn-outline-secondary {{ 'active' if not f_status }}" href="{{ url_for('alerts.index', severity=f_severity) }}">All</a>
+    <a class="btn btn-outline-secondary {{ 'active' if f_status == 'new' }}" href="{{ url_for('alerts.index', status='new', severity=f_severity) }}">New ({{ open_count }})</a>
+    <a class="btn btn-outline-secondary {{ 'active' if f_status == 'acknowledged' }}" href="{{ url_for('alerts.index', status='acknowledged', severity=f_severity) }}">Acknowledged</a>
+    <a class="btn btn-outline-secondary {{ 'active' if f_status == 'resolved' }}" href="{{ url_for('alerts.index', status='resolved', severity=f_severity) }}">Resolved</a>
+  </div>
+  <form method="get" action="{{ url_for('alerts.index') }}" class="d-flex gap-1 align-items-center">
+    {% if f_status %}<input type="hidden" name="status" value="{{ f_status }}">{% endif %}
+    <label class="form-label small mb-0">Severity</label>
+    <select name="severity" class="form-select form-select-sm" style="width:auto" data-autosubmit>
+      <option value="" {{ 'selected' if not f_severity }}>all</option>
+      {% for s in ['critical','high','medium','low'] %}
+      <option value="{{ s }}" {{ 'selected' if f_severity == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Severity</th><th>Rule</th><th>Alert</th><th>Device</th>
+            <th>Status</th><th>Raised</th>{% if can_act %}<th class="text-end">Actions</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+        {% for a in alerts %}
+          <tr>
+            <td><span class="badge text-bg-{{ sev_cls.get(a.severity, 'secondary') }}">{{ a.severity }}</span></td>
+            <td class="small" title="Rule code: {{ a.rule_code }}">{{ a.rule_code | rule_label }}</td>
+            <td>
+              <div><a href="{{ url_for('alerts.detail', alert_id=a.id) }}">{{ a.title }}</a></div>
+              {% if a.detail %}<div class="small text-body-secondary">{{ a.detail }}</div>{% endif %}
+            </td>
+            <td>
+              {% if a.device_id %}
+                <a href="{{ url_for('devices.detail', device_id=a.device_id) }}"
+                   class="font-monospace">{{ a.device_label or a.mac_address or a.device_id }}</a>
+              {% else %}<span class="text-body-secondary">—</span>{% endif %}
+            </td>
+            <td>
+              {% set st_cls = {'new':'danger','acknowledged':'warning','resolved':'success'} %}
+              <span class="badge text-bg-{{ st_cls.get(a.status, 'secondary') }}">{{ a.status }}</span>
+            </td>
+            <td class="text-body-secondary small">{{ a.created_at }}</td>
+            {% if can_act %}
+            <td class="text-end">
+              <div class="d-flex gap-1 justify-content-end align-items-center">
+                {% if a.status == 'new' %}
+                <form method="post" action="{{ url_for('alerts.acknowledge', alert_id=a.id) }}">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <button class="btn btn-outline-warning btn-sm">Ack</button>
+                </form>{% endif %}
+                {% if a.status != 'resolved' %}
+                <form method="post" action="{{ url_for('alerts.resolve', alert_id=a.id) }}"
+                      class="d-flex gap-1">
+                  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="next" value="{{ request.full_path }}">
+                  <input name="note" class="form-control form-control-sm" style="width:9rem"
+                         placeholder="note (optional)">
+                  <button class="btn btn-outline-success btn-sm">Resolve</button>
+                </form>{% endif %}
+              </div>
+            </td>
+            {% endif %}
+          </tr>
+        {% else %}
+          <tr><td colspan="{{ 7 if can_act else 6 }}" class="text-center text-body-secondary py-4">
+            No alerts{{ ' with this status' if f_status else '' }}.
+          </td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if total %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+  <span class="small text-body-secondary">
+    Showing {{ (page - 1) * per_page + 1 }}–{{ [page * per_page, total] | min }} of {{ total }} alert(s)
+  </span>
+  {{ pagination(page, total_pages, 'alerts.index', filter_args) }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

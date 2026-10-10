@@ -1,0 +1,416 @@
+/* pwnm.css — PWNM dark dashboard design system.
+ *
+ * SEVERITY COLORS ARE RESERVED. Defined once here and mirrored, byte-for-byte,
+ * in static/js/charts.js (Chart.js series) and reports/generator.py (PDF
+ * charts). Never reuse a severity color for a vendor/status/other series.
+ *   low = muted blue-grey · medium = amber · high = orange · critical = red
+ * Every severity indicator ships WITH its text label — never color alone.
+ */
+:root {
+  color-scheme: dark;
+
+  /* --- surfaces / structure --- */
+  --bg:          #0a0d13;   /* app background, behind everything */
+  --surface:     #12161e;   /* cards / panels */
+  --surface-2:   #171d28;   /* raised: inputs, hover, active nav */
+  --sidebar-bg:  #0d1119;
+  --border:      rgba(255,255,255,.07);
+  --border-2:    rgba(255,255,255,.13);
+
+  --text:        #e6ebf2;
+  --text-dim:    #93a0b4;   /* secondary text */
+  --text-faint:  #5f6b7e;
+
+  --radius:      16px;
+  --radius-sm:   10px;
+
+  /* --- accent palette (distinct per metric / series) --- */
+  --violet: #a78bfa;  --violet-fill: rgba(167,139,250,.16);
+  --teal:   #2dd4bf;  --teal-fill:   rgba(45,212,191,.16);
+  --amber:  #f0b429;  --amber-fill:  rgba(240,180,41,.16);
+  --rose:   #f2708a;  --rose-fill:   rgba(242,112,138,.16);
+  --green:  #7ee787;  --green-fill:  rgba(126,231,135,.16);
+
+  /* --- reserved severity colors (DO NOT reuse elsewhere) --- */
+  --sev-low: #64748b;        /* muted blue-grey */
+  --sev-medium: #f59e0b;     /* amber          */
+  --sev-high: #ea580c;       /* orange         */
+  --sev-critical: #dc2626;   /* red            */
+
+  /* --- chart tokens (dark) --- */
+  --chart-accent: #a78bfa;
+  --chart-grid: rgba(255,255,255,.06);
+  --chart-ink: #93a0b4;      /* axis/tick/legend TEXT — never a series color */
+}
+
+/* Align Bootstrap's dark theme to our palette so its cards/tables/forms match. */
+[data-bs-theme="dark"] {
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-secondary-color: var(--text-dim);
+  --bs-tertiary-color: var(--text-faint);
+  --bs-border-color: var(--border);
+  --bs-border-color-translucent: var(--border);
+  --bs-card-bg: var(--surface);
+  --bs-card-border-color: var(--border);
+  --bs-secondary-bg: var(--surface-2);
+  --bs-tertiary-bg: var(--surface-2);
+  --bs-emphasis-color: #fff;
+  --bs-heading-color: var(--text);
+}
+
+* { scrollbar-color: var(--border-2) transparent; }
+body { background: var(--bg); color: var(--text);
+       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+/* ==========================================================================
+   App shell: fixed sidebar + fluid main column
+   ========================================================================== */
+.app-shell { display: flex; min-height: 100vh; align-items: stretch; }
+
+.sidebar {
+  flex: 0 0 250px; width: 250px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--border);
+  padding: 22px 16px 16px;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.app-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+.app-content { width: 100%; max-width: 1440px; padding: 8px 30px 44px; }
+
+/* --- sidebar brand --- */
+.side-brand { text-align: center; padding: 4px 4px 14px; }
+.side-brand .brand-name { font-size: 1.35rem; font-weight: 700; letter-spacing: .2px; }
+.side-brand .brand-sub  { font-size: .78rem; color: var(--text-dim); margin-top: 2px; }
+.side-brand .brand-id   { margin-top: 6px; font-size: .72rem; color: var(--text-faint);
+                          font-family: ui-monospace, "Cascadia Code", monospace; }
+.dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 50%;
+       background: var(--teal); box-shadow: 0 0 0 3px var(--teal-fill); vertical-align: middle; }
+
+/* --- sidebar sections + nav --- */
+.side-label { font-size: .68rem; font-weight: 700; letter-spacing: .12em;
+              text-transform: uppercase; color: var(--text-faint);
+              padding: 0 8px; margin: 16px 0 6px; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; }
+.side-link {
+  display: flex; align-items: center; gap: 11px;
+  padding: 9px 12px; border-radius: var(--radius-sm);
+  color: var(--text-dim); text-decoration: none; font-size: .9rem; font-weight: 500;
+  transition: background .12s, color .12s;
+}
+.side-link i { font-size: 1.05rem; width: 1.2rem; text-align: center; }
+.side-link:hover { background: var(--surface-2); color: var(--text); }
+.side-link.active { background: var(--surface-2); color: #fff; }
+.side-link.active i { color: var(--violet); }
+.side-link .pill { margin-left: auto; }
+
+/* --- action button (outlined pill) --- */
+.side-action {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 11px 14px; border-radius: 12px;
+  background: var(--surface-2); border: 1px solid var(--border-2);
+  color: var(--text); font-size: .9rem; font-weight: 600; cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.side-action:hover { border-color: var(--violet); background: #1c2330; color: #fff; }
+.side-note { color: var(--text-faint); font-size: .78rem; padding: 4px 8px; }
+
+/* --- sidebar metric card --- */
+.side-metric {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 14px 16px; margin-top: 6px;
+}
+.side-metric .m-label { font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+                        color: var(--text-faint); font-weight: 700; }
+.side-metric .m-value { font-size: 1.9rem; font-weight: 700; line-height: 1.1; margin-top: 2px; }
+.side-metric .m-sub   { font-size: .76rem; color: var(--text-dim); }
+
+/* ==========================================================================
+   Topbar (right-aligned global controls)
+   ========================================================================== */
+.topbar { display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+          padding: 16px 30px 0; }
+.icon-btn { width: 38px; height: 38px; border-radius: 10px; flex: 0 0 auto;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text-dim); display: inline-flex; align-items: center;
+            justify-content: center; text-decoration: none; position: relative; }
+.icon-btn:hover { color: var(--text); border-color: var(--border-2); }
+.user-chip { display: flex; align-items: center; gap: 8px; padding: 5px 6px 5px 12px;
+             border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+             color: var(--text); text-decoration: none; font-size: .85rem; }
+.role-tag { font-size: .68rem; font-weight: 700; text-transform: uppercase; padding: .2em .5em;
+            border-radius: 6px; }
+.role-admin   { background: var(--rose-fill);   color: var(--rose); }
+.role-monitor { background: var(--amber-fill);  color: var(--amber); }
+.role-viewer  { background: var(--teal-fill);   color: var(--teal); }
+
+/* ==========================================================================
+   Page header (Welcome …)
+   ========================================================================== */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end;
+             justify-content: space-between; gap: 12px; margin: 6px 0 22px; }
+.page-head h1 { font-size: 1.9rem; font-weight: 700; margin: 0; }
+.page-head .subtitle { color: var(--text-dim); font-size: .95rem; margin-top: 2px; }
+.page-head .head-meta { color: var(--text-dim); font-size: .85rem; }
+
+.section-title { font-size: 1.15rem; font-weight: 700; margin: 26px 0 14px; }
+
+/* ==========================================================================
+   Stat cards (with live sparklines)
+   ========================================================================== */
+.stat-card { background: var(--surface); border: 1px solid var(--border);
+             border-radius: var(--radius); padding: 16px 18px; height: 100%;
+             display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+.stat-label { color: var(--text-dim); font-size: .82rem; font-weight: 500; }
+.stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+.stat-value.net-metric { font-size: 1.55rem; }   /* rate strings ("12.3 Mb/s") fit better */
+.stat-value .u { font-size: .9rem; font-weight: 500; color: var(--text-dim); margin-left: 2px; }
+.accent-violet .stat-value { color: var(--violet); }
+.accent-teal   .stat-value { color: var(--teal); }
+.accent-amber  .stat-value { color: var(--amber); }
+.accent-rose   .stat-value { color: var(--rose); }
+
+/* ==========================================================================
+   Panels (charts, tables, feeds)
+   ========================================================================== */
+.panel { background: var(--surface); border: 1px solid var(--border);
+         border-radius: var(--radius); padding: 18px 20px; height: 100%; }
+.panel-head { display: flex; align-items: center; justify-content: space-between;
+              gap: 10px; margin-bottom: 10px; }
+.panel-title { font-size: .95rem; font-weight: 600; color: var(--text); margin: 0; }
+.panel-legend { display: flex; gap: 14px; font-size: .78rem; color: var(--text-dim); }
+.panel-legend .lg { display: inline-flex; align-items: center; gap: 6px; }
+.panel-legend .sw { width: 12px; height: 4px; border-radius: 2px; display: inline-block; }
+
+/* Chart container: fixed height (charts are maintainAspectRatio:false) with an
+ * overlay slot for the empty state. */
+.chart-box { position: relative; height: 260px; }
+.chart-box.compact { height: 210px; }
+.chart-empty { position: absolute; inset: 0; display: none;
+               align-items: center; justify-content: center; text-align: center;
+               color: var(--text-dim); font-size: .9rem; padding: 1rem; }
+.chart-scroll { overflow-x: auto; }
+
+/* ==========================================================================
+   Tables
+   ========================================================================== */
+.panel .table { --bs-table-bg: transparent; margin-bottom: 0; }
+.panel .table > thead th {
+  text-transform: uppercase; letter-spacing: .06em; font-size: .7rem;
+  font-weight: 600; color: var(--text-faint); border-bottom: 1px solid var(--border);
+  padding-top: 0; }
+.panel .table > tbody td { border-color: var(--border); vertical-align: middle; }
+.panel .table > tbody tr:last-child td { border-bottom: 0; }
+.table-hover > tbody > tr:hover > * { --bs-table-hover-bg: var(--surface-2); }
+
+/* Device action buttons: fixed-width slots so Authorize/Block stay aligned in
+   their own column even when the other button is absent for a given row. */
+.row-actions { display: inline-flex; gap: .4rem; justify-content: flex-end; }
+.act-slot { display: inline-block; }
+.act-slot form { margin: 0; }
+.act-slot .btn { white-space: nowrap; }
+.act-auth  { width: 6rem; }
+.act-block { width: 4.5rem; }
+
+/* Activity feed */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed li { display: flex; align-items: center; justify-content: space-between;
+           gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: .85rem; }
+.feed li:last-child { border-bottom: 0; }
+
+/* ==========================================================================
+   Badges (status + severity)
+   ========================================================================== */
+.badge.text-bg-success   { background: var(--teal-fill)  !important; color: var(--teal)  !important; }
+.badge.text-bg-warning   { background: var(--amber-fill) !important; color: var(--amber) !important; }
+.badge.text-bg-danger    { background: var(--rose-fill)  !important; color: var(--rose)  !important; }
+.badge.text-bg-secondary { background: var(--surface-2)  !important; color: var(--text-dim) !important; }
+.badge.text-bg-info      { background: var(--violet-fill)!important; color: var(--violet)!important; }
+.badge.text-bg-light     { background: var(--surface-2)  !important; color: var(--text-dim) !important; }
+
+/* Severity badge = colour block + text label (readable without colour vision). */
+.sev-badge { display: inline-block; padding: .2em .55em; border-radius: .375rem;
+             color: #fff; font-size: .75em; font-weight: 600; line-height: 1; }
+.sev-low      { background: var(--sev-low); }
+.sev-medium   { background: var(--sev-medium); }
+.sev-high     { background: var(--sev-high); }
+.sev-critical { background: var(--sev-critical); }
+
+/* ==========================================================================
+   Forms / buttons touch-ups on dark
+   ========================================================================== */
+.form-control, .form-select { background: var(--surface-2); border-color: var(--border);
+                              color: var(--text); }
+.form-control:focus, .form-select:focus { background: var(--surface-2); color: var(--text);
+    border-color: var(--violet); box-shadow: 0 0 0 .2rem var(--violet-fill); }
+.form-control::placeholder { color: var(--text-faint); }
+.btn-primary { --bs-btn-bg: var(--violet); --bs-btn-border-color: var(--violet);
+    --bs-btn-hover-bg: #9575f0; --bs-btn-hover-border-color: #9575f0;
+    --bs-btn-color: #14121f; --bs-btn-hover-color: #14121f; }
+
+/* Auth (login) page — centered card on the dark ground */
+.auth-main { min-height: 100vh; display: flex; align-items: center; justify-content: center;
+             padding: 24px; }
+.auth-main .card { background: var(--surface); border: 1px solid var(--border);
+                   border-radius: var(--radius); }
+.auth-brand { text-align: center; margin-bottom: 16px; }
+.auth-brand .brand-name { font-size: 1.6rem; font-weight: 700; }
+.auth-brand .brand-sub { color: var(--text-dim); font-size: .85rem; }
+
+/* ==========================================================================
+   Responsive: stack the sidebar above the content on narrow screens
+   ========================================================================== */
+@media (max-width: 991.98px) {
+  .app-shell { flex-direction: column; }
+  .sidebar { position: static; height: auto; width: 100%; flex-basis: auto;
+             border-right: 0; border-bottom: 1px solid var(--border); }
+  .side-foot { margin-top: 14px; }
+  .app-content { padding: 8px 16px 32px; }
+  .topbar { padding: 12px 16px 0; }
+}
+
+/* Show/hide password toggle (added to every password field by app.js). */
+.pw-toggle { background: var(--surface-2); color: var(--text-dim);
+             border: 1px solid var(--border); border-left: 0; }
+.pw-toggle:hover, .pw-toggle:focus-visible { color: var(--text); background: var(--surface-2);
+             border-color: var(--border); }
+.pw-group .form-control:focus + .pw-toggle { border-color: var(--violet); }
+.pw-group .form-control { border-right: 0; }
+
+/* Edge/IE draw their own reveal "eye" inside password fields; hide it so only
+   the PWNM toggle shows (otherwise there are two eyes once you start typing). */
+input::-ms-reveal,
+input::-ms-clear { display: none; }
+
+/* Draw the focus ring around the whole field+eye group instead of the input
+   alone, so the outline doesn't cut into the toggle button. */
+.pw-group .form-control:focus { box-shadow: none; }
+.pw-group:focus-within { border-radius: var(--bs-border-radius);
+                         box-shadow: 0 0 0 .2rem var(--violet-fill); }
+.pw-group:focus-within .form-control,
+.pw-group:focus-within .pw-toggle { border-color: var(--violet); }
+
+/* Per-chart date filter (injected by charts.js above every chart). */
+.chart-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+                margin: 0 0 10px; }
+.chart-filter .cf-preset { width: auto; min-width: 9.5rem; }
+.chart-filter .cf-custom { display: flex; align-items: center; gap: 6px; }
+.chart-filter .cf-custom[hidden] { display: none; }
+.chart-filter .cf-custom input { width: 9.5rem; }
+.chart-filter .cf-dash { color: var(--text-faint); font-size: .8rem; }
+
+/* Detection settings: label + explanation on the left, input on the right. */
+.setting-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px;
+               padding: 12px 0; border-top: 1px solid var(--border); }
+.settings-group .setting-row:first-of-type { border-top: 0; padding-top: 0; }
+.setting-text { flex: 1 1 22rem; min-width: 0; }
+.setting-text .small { max-width: 46rem; margin-top: 2px; }
+.setting-input { flex: 0 0 17rem; max-width: 100%; }
+.setting-input .input-group-text { background: var(--surface); color: var(--text-dim);
+                                   border-color: var(--border); font-size: .85rem; }
+.dur-hint { min-height: 1.2em; margin-top: 3px; }
+
+/* Severity buttons under the "alerts over time" chart. Five equal-width
+   buttons: four severities (click = show only that one) plus All. */
+.sev-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.sev-btn { flex: 1 1 0; min-width: 5.5rem; display: inline-flex; align-items: center;
+           justify-content: center; gap: 6px; padding: 5px 10px;
+           background: var(--surface-2); border: 1px solid var(--border);
+           border-radius: var(--radius-sm); color: var(--text-dim);
+           font-size: .8rem; font-weight: 600; cursor: pointer; }
+.sev-btn:hover { color: var(--text); border-color: var(--border-2); }
+.sev-btn.active { color: #fff; border-color: var(--violet); background: #1c2330; }
+.sev-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+
+/* ==========================================================================
+   Phones & tablets: slide-in sidebar, no sideways scrolling
+   ========================================================================== */
+.mobile-bar { display: none; }                 /* desktop: hidden */
+.sidebar-backdrop { display: none; }
+
+@media (max-width: 991.98px) {
+  html, body { max-width: 100%; overflow-x: hidden; }
+
+  /* Sticky phone header with the menu button. */
+  .mobile-bar { display: flex; align-items: center; gap: 10px;
+                position: sticky; top: 0; z-index: 1030;
+                padding: 8px 12px; background: var(--sidebar-bg);
+                border-bottom: 1px solid var(--border); }
+  .mobile-title { font-weight: 700; font-size: 1.05rem; margin-right: auto; }
+  .mobile-burger { width: 40px; height: 40px; border-radius: 10px; flex: 0 0 auto;
+                   background: var(--surface-2); border: 1px solid var(--border);
+                   color: var(--text); font-size: 1.3rem; line-height: 1;
+                   display: inline-flex; align-items: center; justify-content: center; }
+  .mobile-bar .icon-btn { position: relative; }
+  .mobile-badge { position: absolute; top: -4px; right: -4px; min-width: 18px;
+                  padding: 0 5px; border-radius: 999px; background: var(--rose);
+                  color: #1a0d12; font-size: .68rem; font-weight: 700;
+                  line-height: 18px; text-align: center; }
+
+  /* The sidebar slides OVER the page instead of stacking above it. */
+  .app-shell { flex-direction: column; }
+  .sidebar { position: fixed; top: 0; left: 0; bottom: 0; height: 100dvh;
+             width: 82vw; max-width: 300px; flex-basis: auto;
+             transform: translateX(-100%); transition: transform .2s ease;
+             z-index: 1045; border-right: 1px solid var(--border); overflow-y: auto; }
+  .sidebar.open { transform: none; box-shadow: 0 0 40px rgba(0,0,0,.6); }
+  .sidebar-backdrop { display: block; position: fixed; inset: 0; z-index: 1040;
+                      background: rgba(0,0,0,.55); }
+  .sidebar-backdrop[hidden] { display: none; }
+  body.sidebar-open { overflow: hidden; }       /* no scrolling behind the menu */
+
+  /* Content breathes and never forces a horizontal scrollbar. */
+  .app-content { padding: 12px 14px 32px; }
+  .topbar { padding: 10px 14px 0; flex-wrap: wrap; }
+  .page-head h1 { font-size: 1.4rem; }
+  .page-head { margin-bottom: 14px; }
+  .section-title { font-size: 1.05rem; margin: 18px 0 10px; }
+  .stat-value { font-size: 1.6rem; }
+  .stat-value.net-metric { font-size: 1.15rem; }
+  .chart-box { height: 220px; }
+  .chart-box.compact { height: 190px; }
+
+  /* Filters/legends stack instead of overflowing. */
+  .chart-filter .cf-preset, .chart-filter .cf-custom { width: 100%; }
+  .chart-filter .cf-custom input { flex: 1 1 0; width: auto; }
+  .sev-btn { flex: 1 1 30%; min-width: 4.5rem; }
+
+  /* Settings: label above, input below, full width. */
+  .setting-input { flex: 1 1 100%; }
+  .setting-text { flex: 1 1 100%; }
+
+  /* Device actions and tables. */
+  .row-actions { flex-wrap: wrap; }
+  .table-responsive { -webkit-overflow-scrolling: touch; }
+  .card-body { padding: 14px; }
+}
+
+/* Very small phones: let the action buttons wrap rather than squeeze. */
+@media (max-width: 400px) {
+  .act-auth { width: 5.5rem; }
+  .act-block { width: 4rem; }
+  .mobile-title { font-size: .98rem; }
+}
+
+/* Change-password modal + the chip that opens it (a <button>, not a link). */
+.user-chip { cursor: pointer; font-family: inherit; }
+[data-bs-theme="dark"] .modal-content { background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius); }
+[data-bs-theme="dark"] .modal-header,
+[data-bs-theme="dark"] .modal-footer { border-color: var(--border); }
+
+/* Frosted backdrop: blur the page behind any open modal (and the mobile menu)
+   so the dialog is clearly the focus. */
+.modal-backdrop.show {
+  opacity: 1;                                  /* we control the tint below */
+  background-color: rgba(6, 9, 14, .5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);          /* Safari */
+}
+.sidebar-backdrop {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+/* Lift the dialog off the blurred page. */
+.modal-content { box-shadow: 0 24px 60px rgba(0, 0, 0, .55); }

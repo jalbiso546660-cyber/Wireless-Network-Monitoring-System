@@ -1,0 +1,12 @@
+# PWNM — Python-Based Wireless Network Monitoring System
+# Pinned dependencies (Python 3.12). Do not change a pin without a documented reason.
+Flask==3.1.3
+Flask-Login==0.6.3
+scapy==2.7.0
+psutil==6.1.0
+python-nmap==0.7.1
+mysql-connector-python==9.1.0
+APScheduler==3.10.4
+mac-vendor-lookup==0.1.12
+reportlab==4.2.5
+python-dotenv==1.0.1

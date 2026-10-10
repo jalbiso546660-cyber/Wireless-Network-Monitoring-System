@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, online_badge, pagination %}
+{% block title %}Devices{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Devices</h1>
+
+<!-- Charts 2.1, 3.1, 3.2 -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8"><div class="card h-100"><div class="card-body">
+    <h2 class="h6 text-body-secondary">Devices found</h2>
+    <div class="chart-box compact"><canvas id="chart-scan-history"></canvas></div>
+  </div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-body">
+    <h2 class="h6 text-body-secondary">Devices by status</h2>
+    <div class="chart-box compact"><canvas id="chart-device-status"></canvas></div>
+  </div></div></div>
+  <div class="col-12"><div class="card"><div class="card-body">
+    <h2 class="h6 text-body-secondary">Top vendors (OUI lookup)</h2>
+    <div class="chart-box"><canvas id="chart-vendor-distribution"></canvas></div>
+  </div></div></div>
+</div>
+
+<form method="get" action="{{ url_for('devices.index') }}" class="row row-cols-auto g-2 align-items-end mb-3">
+  <div class="col">
+    <label class="form-label small mb-0">Status</label>
+    <select name="status" class="form-select form-select-sm">
+      <option value="" {{ 'selected' if not f_status }}>all</option>
+      {% for s in ['authorized','unauthorized','blocked'] %}
+      <option value="{{ s }}" {{ 'selected' if f_status == s }}>{{ s | status_label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col">
+    <label class="form-label small mb-0">Presence</label>
+    <select name="online" class="form-select form-select-sm">
+      <option value="" {{ 'selected' if not f_online }}>all</option>
+      <option value="online" {{ 'selected' if f_online == 'online' }}>online</option>
+      <option value="offline" {{ 'selected' if f_online == 'offline' }}>offline</option>
+    </select>
+  </div>
+  <div class="col"><button class="btn btn-sm btn-primary">Apply</button>
+    <a href="{{ url_for('devices.index') }}" class="btn btn-sm btn-outline-secondary">Reset</a></div>
+</form>
+
+<div class="table-responsive">
+<table class="table table-sm align-middle">
+  <thead><tr>
+    <th>Status</th><th>Presence</th><th>MAC</th><th>IP</th><th>Vendor</th>
+    <th>Hostname</th>{% if current_user.role == 'admin' %}<th class="text-end">Actions</th>{% endif %}
+  </tr></thead>
+  <tbody>
+    {% for d in devices %}
+    <tr>
+      <td>{{ status_badge(d.status) }}</td>
+      <td>{{ online_badge(d.is_online) }}</td>
+      <td class="font-monospace">
+        <a href="{{ url_for('devices.detail', device_id=d.id) }}">{{ d.device_label or d.mac_address }}</a>
+      </td>
+      <td class="font-monospace">{{ d.last_ip or '' }}</td>
+      <td>{{ d.vendor or '' }}</td>
+      <td>{{ d.hostname or '' }}</td>
+      {% if current_user.role == 'admin' %}
+      <td class="text-end">
+        {# Fixed slots keep Authorize/Flag column-aligned even when one is absent. #}
+        <div class="row-actions">
+          <span class="act-slot act-auth">
+            {% if d.status != 'authorized' %}
+            <form method="post" action="{{ url_for('devices.authorize', device_id=d.id) }}"
+                  data-confirm="Authorize this device as trusted?">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-success btn-sm w-100">Authorize</button>
+            </form>{% endif %}
+          </span>
+          <span class="act-slot act-block">
+            {% if d.status != 'blocked' %}
+            <form method="post" action="{{ url_for('devices.block', device_id=d.id) }}"
+                  data-confirm="Flag this device? Every reappearance will raise a critical alert.">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+              <button class="btn btn-outline-danger btn-sm w-100">Flag</button>
+            </form>{% endif %}
+          </span>
+        </div>
+      </td>
+      {% endif %}
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="text-body-secondary">No devices match the filter.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+
+{% if total %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+  <span class="small text-body-secondary">
+    Showing {{ (page - 1) * per_page + 1 }}–{{ [page * per_page, total] | min }} of {{ total }} device(s)
+  </span>
+  {{ pagination(page, total_pages, 'devices.index', filter_args) }}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endblock %}

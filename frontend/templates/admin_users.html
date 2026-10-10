@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">User Management</h1>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">Create user</h2>
+    <form method="post" action="{{ url_for('auth.users_create') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Username</label>
+        <input name="username" class="form-control" required autocomplete="off">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">Full name (optional)</label>
+        <input name="full_name" class="form-control" autocomplete="off">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Role</label>
+        <select name="role" class="form-select">
+          {% for r in valid_roles %}<option value="{{ r }}">{{ r }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Password</label>
+        <input name="password" type="password" class="form-control" required autocomplete="new-password">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">Confirm</label>
+        <input name="confirm_password" type="password" class="form-control" required autocomplete="new-password">
+      </div>
+      <div class="col-12">
+        <button class="btn btn-primary btn-sm">Create user</button>
+        <span class="small text-body-secondary ms-2">Minimum 8 characters.</span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0">
+        <thead>
+          <tr><th>User</th><th>Role</th><th>Status</th><th class="text-end">Reset password</th></tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ u.username }}
+                {% if u.id == current_user.id %}<span class="badge text-bg-info">you</span>{% endif %}
+              </div>
+              <div class="small text-body-secondary">{{ u.full_name or '—' }}</div>
+            </td>
+            <td>
+              <form method="post" action="{{ url_for('auth.users_role', user_id=u.id) }}"
+                    class="d-flex gap-1">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <select name="role" class="form-select form-select-sm" style="width:auto">
+                  {% for r in valid_roles %}
+                  <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>
+                  {% endfor %}
+                </select>
+                <button class="btn btn-outline-secondary btn-sm">Set</button>
+              </form>
+            </td>
+            <td>
+              {% if u.is_active %}
+                <span class="badge text-bg-success">active</span>
+              {% else %}
+                <span class="badge text-bg-secondary">disabled</span>
+              {% endif %}
+              <form method="post" action="{{ url_for('auth.users_active', user_id=u.id) }}" class="d-inline ms-1">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="active" value="{{ 0 if u.is_active else 1 }}">
+                <button class="btn btn-sm {{ 'btn-outline-danger' if u.is_active else 'btn-outline-success' }}">
+                  {{ 'Disable' if u.is_active else 'Enable' }}
+                </button>
+              </form>
+            </td>
+            <td class="text-end">
+              <form method="post" action="{{ url_for('auth.users_password', user_id=u.id) }}"
+                    class="d-flex gap-1 justify-content-end">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <input name="password" type="password" class="form-control"
+                       placeholder="new password" style="width:11rem" autocomplete="new-password">
+                <input name="confirm_password" type="password" class="form-control"
+                       placeholder="confirm" style="width:9rem" autocomplete="new-password">
+                <button class="btn btn-outline-primary">Reset</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

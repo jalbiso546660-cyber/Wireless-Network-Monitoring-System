@@ -1,0 +1,54 @@
+name: CI
+
+# Runs the PWNM test suite on every push / PR against a throwaway MySQL service.
+# The suite creates and drops its own `pwnm_test` schema (see backend/tests/conftest.py).
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASSWORD: root
+      # conftest.py forces DB_NAME to pwnm_test; this secret is CI-only.
+      SECRET_KEY: ci-only-secret-not-a-real-deployment-key
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Wait for MySQL to accept connections
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -proot --silent; then exit 0; fi
+            sleep 2
+          done
+          echo "MySQL did not become ready" && exit 1
+
+      - name: Run tests
+        working-directory: backend
+        run: python -m pytest -q

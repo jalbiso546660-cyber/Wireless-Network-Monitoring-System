@@ -1,0 +1,23 @@
+# Secrets — never commit real credentials
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs / runtime (including rotated files: pwnm.log.1, pwnm.log.2, ...)
+*.log
+*.log.*
+
+# Generated reports (PDF/CSV) — Phase 7
+reports/out/
+
+# Database backups/dumps — contain real data (password hashes, device info)
+backups/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/

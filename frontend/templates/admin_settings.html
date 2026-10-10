@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}Detection Settings{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">Detection Settings</h1>
+
+{# System health — live capability check for each moving part #}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">System health</h2>
+    <div class="d-flex flex-wrap gap-2">
+      <span class="badge {{ 'text-bg-success' if health.database else 'text-bg-danger' }}">Database {{ 'up' if health.database else 'down' }}</span>
+      <span class="badge {{ 'text-bg-success' if health.scanner else 'text-bg-secondary' }}">Scanner {{ 'running' if health.scanner else 'stopped' }}</span>
+      <span class="badge {{ 'text-bg-success' if health.sniffer else 'text-bg-secondary' }}">Sniffer {{ 'active' if health.sniffer else 'dormant' }}</span>
+      <span class="badge {{ 'text-bg-success' if health.nmap else 'text-bg-secondary' }}">nmap {{ 'installed' if health.nmap else 'not found' }}</span>
+    </div>
+  </div>
+</div>
+
+{# Gateway ARP baseline — trust-on-first-use; resettable after a router change #}
+<div class="card mb-2">
+  <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div>
+      <h2 class="h6 mb-1">Gateway ARP baseline</h2>
+    </div>
+    <form method="post" action="{{ url_for('settings.reset_baseline') }}"
+          data-confirm="Clear the gateway ARP baseline? It will be re-learned on the next scan.">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-warning btn-sm">Reset baseline</button>
+    </form>
+  </div>
+</div>
+
+{# Module 9.3 — Interface Configuration: pick an adapter, derive its subnet #}
+<div class="card mb-4">
+  <div class="card-body">
+    <h2 class="h6">Monitored interface</h2>
+    <form method="post" action="{{ url_for('settings.choose_interface') }}" class="row g-2 align-items-end">
+      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-6">
+        <select name="interface" class="form-select">
+          {% for i in interfaces %}
+          <option value="{{ i.name }}">
+            {{ i.name }} — {{ i.subnet_cidr }}{% if i.is_virtual %} (virtual/VPN?){% endif %}{% if not i.is_up %} (down){% endif %}
+          </option>
+          {% else %}
+          <option value="">No adapters detected</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button class="btn btn-outline-primary">Use this adapter</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="post" action="{{ url_for('settings.save') }}">
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+
+  {% for g in groups %}
+  <div class="card mb-3 settings-group">
+    <div class="card-body">
+      <h2 class="h6 mb-1">{{ g.title }}</h2>
+      <p class="small text-body-secondary mb-3">{{ g.intro }}</p>
+
+      {% for it in g["items"] %}
+      <div class="setting-row">
+        <div class="setting-text">
+          <label class="fw-semibold" for="s-{{ it.key }}" title="Setting key: {{ it.key }}">{{ it.label }}</label>
+          {% if it.help %}<div class="small text-body-secondary">{{ it.help }}</div>{% endif %}
+        </div>
+        <div class="setting-input">
+          {% if it.kind == 'int' %}
+          <div class="input-group">
+            <input class="form-control" type="number" min="{{ it.min }}" max="{{ it.max }}"
+                   id="s-{{ it.key }}" name="{{ it.key }}" value="{{ it.value }}"
+                   {% if it.unit in ('seconds', 'minutes', 'days') %}data-duration="{{ it.unit }}"{% endif %}>
+            {% if it.unit %}<span class="input-group-text">{{ it.unit }}</span>{% endif %}
+          </div>
+          <div class="small text-body-secondary dur-hint" aria-live="polite"></div>
+          {% elif it.kind == 'time' %}
+          <input class="form-control" type="time"
+                 id="s-{{ it.key }}" name="{{ it.key }}" value="{{ it.value }}">
+          {% else %}
+          <input class="form-control font-monospace" type="text"
+                 id="s-{{ it.key }}" name="{{ it.key }}" value="{{ it.value }}">
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="d-flex justify-content-end mb-2">
+    <button class="btn btn-primary">Save settings</button>
+  </div>
+</form>
+
+{# Configuration audit trail — accountability for who changed what, when #}
+<div class="card mt-4">
+  <div class="card-body">
+    <h2 class="h6">Recent configuration changes</h2>
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr><th>When</th><th>Setting</th><th>From</th><th>To</th><th>By</th></tr>
+        </thead>
+        <tbody>
+        {% for a in audit %}
+          <tr>
+            <td class="text-body-secondary small">{{ a.changed_at }}</td>
+            <td class="small" title="{{ a.setting_key }}">{{ setting_label(a.setting_key) }}</td>
+            <td class="font-monospace small text-body-secondary">{{ a.old_value if a.old_value is not none else '—' }}</td>
+            <td class="font-monospace small">{{ a.new_value if a.new_value is not none else '—' }}</td>
+            <td class="small">{{ a.changed_by or 'system' }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-body-secondary small">No changes recorded yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
