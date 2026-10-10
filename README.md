@@ -116,6 +116,4 @@ python -m pytest
 
 PWNM's device discovery uses ARP, a Layer-2 broadcast protocol that routers do not forward. This means it only works when run on a host **inside** the network it's monitoring — it cannot be deployed to a conventional cloud/web host and still detect devices, since that host would be on a completely different network. The correct deployment model is a machine on the local network (a laptop, a Raspberry Pi) reachable over that LAN or a VPN.
 
-## License
 
-Academic project — built for coursework purposes.
